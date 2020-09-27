@@ -20,23 +20,19 @@ namespace UnityGoogleSheets
 
 		void OnGUI()
 		{
-			if (!AuthService.CredentialExist)
+			if (!SheetService.CredentialExist)
 			{
 				EditorGUILayout.LabelField("Credential file not found, put in anywhere in Assets");
-				GUILayout.Box("Get it on the button");
-				
 				GetCredentialBinding = GUILayout.Button("Enable the Google Sheets API");
-				
-				
 				return;
 			}
 
-			if (!AuthService.Authorized && !AuthService.IsProcessingAuth)
+			if (!SheetService.Authorized && !SheetService.IsProcessingAuth)
 			{
 				SignInBinding = GUILayout.Button("Sign In");
 			}
 
-			if (AuthService.Authorized)
+			if (SheetService.Authorized)
 			{
 				EditorGUILayout.LabelField("Authorized");
 				SignOutBinding = GUILayout.Button("Sign Out");
@@ -44,14 +40,10 @@ namespace UnityGoogleSheets
 
 			}
 
-			if (AuthService.IsProcessingAuth)
+			if (SheetService.IsProcessingAuth)
 			{
 				EditorGUILayout.LabelField("Processing");
 				AbortAuth = GUILayout.Button("Abort");
-			}
-			else
-			{
-				EditorGUILayout.LabelField("NON Processing");
 			}
 		}
 
@@ -60,7 +52,7 @@ namespace UnityGoogleSheets
 		{
 			set
 			{
-				if(value) AuthService.SignIn();
+				if(value) SheetService.SignIn();
 			}
 		}
 		
@@ -68,7 +60,7 @@ namespace UnityGoogleSheets
 		{
 			set
 			{
-				if(value) AuthService.SignOut();
+				if(value) SheetService.SignOut();
 			}
 		}
 
@@ -76,7 +68,7 @@ namespace UnityGoogleSheets
 		{
 			set
 			{
-				if(value) AuthService.Abort();
+				if(value) SheetService.AbortAuth();
 			}
 		}
 

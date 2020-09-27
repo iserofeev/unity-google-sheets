@@ -1,18 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
-using Google.Apis.Sheets.v4.Data;
 using Google.Apis.Util.Store;
 using UnityEditor;
 using UnityEngine;
 
 namespace UnityGoogleSheets
 {
-	public static class AuthService
+	public static class SheetService
 	{
 		static string GOOGLE_TOKEN_PATH => Path.Combine(Application.persistentDataPath, "google_sheets_token.json");
 
@@ -61,7 +62,7 @@ namespace UnityGoogleSheets
 				var cancellationToken = _tokenSource.Token;
 				var credPath = CredentialPath;
 				var googleTokenPath = GOOGLE_TOKEN_PATH;
-				await Task.Run(() => AuthorizeAsync(credPath, googleTokenPath, cancellationToken), cancellationToken);
+				await Task.Run(() => Authorize(credPath, googleTokenPath, cancellationToken), cancellationToken);
 			}
 			catch (Exception)
 			{
@@ -69,18 +70,20 @@ namespace UnityGoogleSheets
 			}
 			finally
 			{
-				Abort();
+				AbortAuth();
 			}
 		}
 
-		public static void Abort()
+		public static void AbortAuth()
 		{
 			_tokenSource?.Cancel();
 			_tokenSource?.Dispose();
 			_tokenSource = null;
 		}
 
-		static void AuthorizeAsync(string credPath, string tokenPath, CancellationToken cancellationToken)
+#pragma warning disable 1998
+		static async Task<UserCredential> Authorize(string credPath, string tokenPath, CancellationToken cancellationToken)
+#pragma warning restore 1998
 		{
 			UserCredential credential;
 			string[] scopes = {SheetsService.Scope.SpreadsheetsReadonly};
@@ -97,40 +100,42 @@ namespace UnityGoogleSheets
 					new FileDataStore(tokenPath, true)).Result;
 			}
 
+			return credential;
+		}
 
-			// Create Google Sheets API service.
-			var service = new SheetsService(new BaseClientService.Initializer()
+		public static async Task<List<List<string>>> GetTableValues(string spreadsheetId, string range = "A1")
+		{
+			var service = await CreateService();
+			var request = service.Spreadsheets.Values.Get(spreadsheetId, range);
+			var values = request.Execute().Values;
+
+			if (values == null || values.Count <= 0) return null;
+
+			var res = new List<List<string>>();
+			foreach (var iList in values)
 			{
-				HttpClientInitializer = credential,
+				var l = new List<string>();
+				res.Add(l);
+				l.AddRange(iList.Select(val => val.ToString()));
+			}
+
+			return res;
+		
+
+		}
+
+		static async Task<SheetsService> CreateService()
+		{
+			var conSrc = new CancellationTokenSource();
+			conSrc.CancelAfter(new TimeSpan(0, 1, 0));
+
+			var service = new BaseClientService.Initializer()
+			{
+				HttpClientInitializer = await Authorize(CredentialPath, GOOGLE_TOKEN_PATH, conSrc.Token),
 				ApplicationName = "Google Sheets Unity",
-			});
+			};
 
-			// Define request parameters.
-			String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
-			String range = "Class Data!A2:E";
-
-			SpreadsheetsResource.ValuesResource.GetRequest request =
-				service.Spreadsheets.Values.Get(spreadsheetId, range);
-			
-
-			// Prints the names and majors of students in a sample spreadsheet:
-			// https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-			ValueRange response = request.Execute();
-
-			var values = response.Values;
-			if (values != null && values.Count > 0)
-			{
-				Debug.Log("Name, Major");
-				foreach (var row in values)
-				{
-					// Print columns A and E, which correspond to indices 0 and 4.
-					Debug.Log($"{row[0]}, {row[4]}");
-				}
-			}
-			else
-			{
-				Debug.Log("No data found.");
-			}
+			return new SheetsService(service);
 		}
 	}
 }
