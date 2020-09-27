@@ -6,13 +6,13 @@
   "unity": "2019.1",
   "unityRelease": "0b5",
   "dependencies": {},
- "keywords": [
+  "keywords": [
     "GoogleSheets",
     "Google",
     "Sheets"
   ],
   "author": {
-    "name": "Ivan E",
-    "email": "iserofeev@yandex.ru",
+    "name": "IvanE",
+    "email": "iserofeev@yandex.ru"
   }
 }
